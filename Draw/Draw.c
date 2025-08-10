@@ -63,7 +63,7 @@ void DestroyCircle(Circle circle)
 void GetPointOnCircle(int circumference, int index, double *x, double *y)
 {
 	index %= circumference;
-	if(index < -1){index = circumference - index;}
+	if(index < -1){index = circumference + index;}
 	double angleInRadians = (2.0 * M_PI * index) / circumference;  // angleInRadians in radians
 	double radius = circumference / (2.0 * M_PI);
 
@@ -279,7 +279,7 @@ int main()
 	FillBackground(image, height, width, 204, 204, 204, 255);
 	 
 	//Generate Circle
-	int residue = 400;
+	int residue = -2000;
 	int modulus = 731;
 	ModuloCircle(image, height, width, residue, modulus);
 	
