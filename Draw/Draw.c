@@ -15,6 +15,74 @@
 #define fpart(x) ((x) - floorf(x))
 #define rfpart(x) (1.0f - fpart(x))
 //clear && gcc Draw.c -lm -lgmp -o m.o && ./m.o
+typedef struct circle_struct *Circle;
+struct circle_struct
+{
+	int circumference;
+	int index;
+	double x;
+	double y;
+	double radius;
+	int drawX;
+	int drawY;
+	int drawRadius;
+	uint32_t circumferenceColor;
+	uint32_t radiusColor;
+	uint32_t fillColor;
+};
+Circle CreateCircle(int circumference)
+{
+	Circle circle = malloc(sizeof(struct circle_struct));
+	circle->circumference = circumference;
+	circle->index = 0;
+	circle->x = 0;
+	circle->y = 0;
+	circle->radius = circumference / (2.0 * M_PI);
+	circle->drawX = 0;
+	circle->drawY = 0;
+	return circle;
+}
+
+void PrintCircle(Circle circle)
+{
+	if(circle)
+	{
+		//printf("(%d %.3f, %.3f)", circle->index,circle->x,circle->y);
+		printf("%3d,", circle->index);
+	}
+}
+
+void DestroyCircle(Circle circle)
+{
+	if(circle)
+	{
+		free(circle);
+	}
+}
+
+void GetPointOnCircle(int circumference, int index, double *x, double *y)
+{
+	index %= circumference;
+	if(index < -1){index = circumference - index;}
+	double angleInRadians = (2.0 * M_PI * index) / circumference;  // angleInRadians in radians
+	double radius = circumference / (2.0 * M_PI);
+
+	*x = radius * cos(angleInRadians);
+	*y = radius * sin(angleInRadians);
+}
+
+void FillCircle(Circle circle, int index, int height, int width, float scale)
+{
+	assert(scale != 0.0f);
+	double x = 0;double y = 0;
+	GetPointOnCircle(circle->circumference, index, &x, &y);
+	circle->x = x;
+	circle->y = y;
+	circle->drawX = (int)(x * scale);
+	circle->drawY = (int)(y * scale);
+	circle->drawRadius = (int)(circle->radius * scale);
+	circle->index = index;
+}
 
 void ConvertToGridCoordinates(int *x, int *y, int height, int width)
 {
@@ -58,8 +126,12 @@ void SetGrayPixel(int inputX, int inputY, uint8_t brightness, uint8_t alpha, int
 {
 	SetPixelRGBA(inputX, inputY, height, width, image,brightness, brightness, brightness, alpha);
 }
-void DrawWuLine(int x0, int y0, int x1, int y1, int height, int width, uint8_t *image)
+void DrawWuLine(int x0, int y0, int x1, int y1, int height, int width, uint8_t *image, uint32_t rgbaColor)
 {
+	uint8_t r = (rgbaColor >> 24) & 0xFF;
+	uint8_t g = (rgbaColor >> 16) & 0xFF;
+	uint8_t b = (rgbaColor >> 8)  & 0xFF;
+	uint8_t a = (rgbaColor >> 0)  & 0xFF;
 	int steep = abs(y1 - y0) > abs(x1 - x0);
 	if(steep){int tmp;tmp = x0; x0 = y0; y0 = tmp;tmp = x1; x1 = y1; y1 = tmp;}
 	if(x0 > x1){int tmp;tmp = x0; x0 = x1; x1 = tmp;tmp = y0; y0 = y1; y1 = tmp;}
@@ -75,15 +147,15 @@ void DrawWuLine(int x0, int y0, int x1, int y1, int height, int width, uint8_t *
 	int xPixel1 = (int)xEnd;
 	int yPixel1 = ipart(yEnd);
 
-	if (steep)
+	if(steep)
 	{
-		SetGrayPixel(yPixel1, xPixel1, 255, (uint8_t)(rfpart(yEnd) * xGap * 255), height, width, image);
-		SetGrayPixel(yPixel1 + 1, xPixel1, 255, (uint8_t)(fpart(yEnd) * xGap * 255), height, width, image);
+		SetPixelRGBA(yPixel1, xPixel1, height, width, image, r, g, b, (uint8_t)(rfpart(yEnd) * xGap * a));
+		SetPixelRGBA(yPixel1 + 1, xPixel1, height, width, image, r, g, b, (uint8_t)(fpart(yEnd) * xGap * a));
 	}
 	else
 	{
-		SetGrayPixel(xPixel1, yPixel1, 255, (uint8_t)(rfpart(yEnd) * xGap * 255), height, width, image);
-		SetGrayPixel(xPixel1, yPixel1 + 1, 255, (uint8_t)(fpart(yEnd) * xGap * 255), height, width, image);
+		SetPixelRGBA(xPixel1, yPixel1, height, width, image, r, g, b, (uint8_t)(rfpart(yEnd) * xGap * a));
+		SetPixelRGBA(xPixel1, yPixel1 + 1, height, width, image, r, g, b, (uint8_t)(fpart(yEnd) * xGap * a));
 	}
 
 	float intery = yEnd + gradient;
@@ -95,43 +167,48 @@ void DrawWuLine(int x0, int y0, int x1, int y1, int height, int width, uint8_t *
 	int xPixel2 = (int)xEnd;
 	int yPixel2 = ipart(yEnd);
 
-	if (steep)
+	if(steep)
 	{
-		SetGrayPixel(yPixel2, xPixel2, 255, (uint8_t)(rfpart(yEnd) * xGap * 255), height, width, image);
-		SetGrayPixel(yPixel2 + 1, xPixel2, 255, (uint8_t)(fpart(yEnd) * xGap * 255), height, width, image);
+		SetPixelRGBA(yPixel2, xPixel2, height, width, image, r, g, b, (uint8_t)(rfpart(yEnd) * xGap * a));
+		SetPixelRGBA(yPixel2 + 1, xPixel2, height, width, image, r, g, b, (uint8_t)(fpart(yEnd) * xGap * a));
 	}
 	else
 	{
-		SetGrayPixel(xPixel2, yPixel2, 255, (uint8_t)(rfpart(yEnd) * xGap * 255), height, width, image);
-		SetGrayPixel(xPixel2, yPixel2 + 1, 255, (uint8_t)(fpart(yEnd) * xGap * 255), height, width, image);
+		SetPixelRGBA(xPixel2, yPixel2, height, width, image, r, g, b, (uint8_t)(rfpart(yEnd) * xGap * a));
+		SetPixelRGBA(xPixel2, yPixel2 + 1, height, width, image, r, g, b, (uint8_t)(fpart(yEnd) * xGap * a));
 	}
 
 	// Main loop
 	for (int x = xPixel1 + 1; x < xPixel2; x++)
 	{
 		int y = ipart(intery);
-		if(steep)
+		if (steep)
 		{
-			SetGrayPixel(y, x, 255, (uint8_t)(rfpart(intery) * 255), height, width, image);
-			SetGrayPixel(y + 1, x, 255, (uint8_t)(fpart(intery) * 255), height, width, image);
+			SetPixelRGBA(y, x, height, width, image, r, g, b, (uint8_t)(rfpart(intery) * a));
+			SetPixelRGBA(y + 1, x, height, width, image, r, g, b, (uint8_t)(fpart(intery) * a));
 		}
 		else
 		{
-			SetGrayPixel(x, y, 255, (uint8_t)(rfpart(intery) * 255), height, width, image);
-			SetGrayPixel(x, y + 1, 255, (uint8_t)(fpart(intery) * 255), height, width, image);
+			SetPixelRGBA(x, y, height, width, image, r, g, b, (uint8_t)(rfpart(intery) * a));
+			SetPixelRGBA(x, y + 1, height, width, image, r, g, b, (uint8_t)(fpart(intery) * a));
 		}
 		intery += gradient;
 	}
 }
 
-void DrawFilledCircle(int inputX, int inputY, int radius, int height, int width, uint8_t *image)
+void DrawFilledCircle(int inputX, int inputY, int radius, int height, int width, uint8_t *image, uint32_t rgbaColor)
 {
-	for (int y = -radius; y <= radius; y++)
+	uint8_t r = (rgbaColor >> 24) & 0xFF;
+	uint8_t g = (rgbaColor >> 16) & 0xFF;
+	uint8_t b = (rgbaColor >> 8)  & 0xFF;
+	uint8_t a = (rgbaColor >> 0)  & 0xFF;
+
+	for(int y = -radius; y <= radius; y++)
 	{
 		int xSpan = (int)sqrtf(radius * radius - y * y);
 		for(int x = -xSpan; x <= xSpan; x++)
 		{
-			SetPixelRGBA(inputX + x, inputY + y, height, width, image, 255, 255, 255, 255);
+			SetPixelRGBA(inputX + x, inputY + y, height, width, image, r, g, b, a);
 		}
 	}
 }
@@ -173,6 +250,23 @@ void FillBackground(uint8_t *image, int height, int width, uint8_t r, uint8_t g,
 	}
 }
 
+void ModuloCircle(uint8_t *image, int height, int width, int residue,int modulus)
+{
+	float scale = 1.0f;
+	uint32_t axisColor = 5875906;
+	uint32_t dotColor0 = 4278190335;
+	int dotRadius = 5;
+	Circle finiteField = CreateCircle(modulus);
+	FillCircle(finiteField, residue, height,width,scale);
+	//Draw axes
+	DrawWuLine(-width / 2, 0, width / 2, 0, height, width, image, axisColor);  // Horizontal center line
+	DrawWuLine(0, -height / 2, 0, height / 2, height, width, image, axisColor); // Vertical center line
+	//Draw finite field
+	DrawAACircle(0, 0, (float) finiteField->drawRadius, height, width, image);          
+	//Draw current residue
+	DrawFilledCircle(finiteField->drawX, finiteField->drawY, dotRadius, height, width, image,dotColor0);         
+	DestroyCircle(finiteField);
+}
 
 int main()
 {
@@ -184,9 +278,12 @@ int main()
 	//Background color
 	FillBackground(image, height, width, 204, 204, 204, 255);
 	 
-	DrawFilledCircle(0, 0, 50, height, width, image);         
-	DrawAACircle(0, 0, 60.0f, height, width, image);          
-	DrawWuLine(-200, 200, 200, -200, height, width, image);
+	//Generate Circle
+	int residue = 400;
+	int modulus = 731;
+	ModuloCircle(image, height, width, residue, modulus);
+	
+
 
 	stbi_write_png(fileName, width, height, channels, image, width * channels);
 	free(image);
